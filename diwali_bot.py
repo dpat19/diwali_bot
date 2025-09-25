@@ -2,6 +2,7 @@ import os
 import json
 import base64
 from datetime import datetime
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (
@@ -11,7 +12,7 @@ from telegram.ext import (
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# --- Load Google Sheets Credentials from Base64 Environment Variable ---
+# --- Google Sheets Setup ---
 creds_b64 = os.environ.get("GOOGLE_CREDS_B64")
 if not creds_b64:
     raise ValueError("GOOGLE_CREDS_B64 environment variable not set!")
@@ -23,15 +24,18 @@ scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/au
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 
-# --- Open Google Sheet by ID (avoids name issues) ---
 SHEET_ID = "1fBLl8BFPlGYLmG8s_D9d17AbvOyltZWz5wqk1wcb-oA"
 sheet = client.open_by_key(SHEET_ID).sheet1
+
+# --- Telegram Setup ---
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+CHAT_ID = os.environ.get("TARGET_CHAT_ID")  # The chat you want to send scheduled messages to
 
 # --- Conversation states ---
 DEPARTMENT, VOLUNTEERS = range(2)
 departments = ["Kitchen", "Flow", "Shayona", "Signs"]
 
-# --- Telegram Handlers ---
+# --- Conversation Handlers ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_keyboard = [[d] for d in departments]
     await update.message.reply_text(
@@ -60,7 +64,6 @@ async def volunteers(update: Update, context: ContextTypes.DEFAULT_TYPE):
     volunteers_count = int(text)
     now = datetime.now()
 
-    # Save to Google Sheet
     sheet.append_row([
         user.full_name,
         department,
@@ -76,12 +79,29 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("❌ Request cancelled.")
     return ConversationHandler.END
 
-# --- Main Application ---
-def main():
-    TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-    if not TELEGRAM_BOT_TOKEN:
-        raise ValueError("TELEGRAM_BOT_TOKEN environment variable not set!")
+# --- Temporary handler to get chat ID ---
+async def get_chat_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.message.chat_id
+    await update.message.reply_text(f"This chat ID is: {chat_id}")
 
+# --- Scheduled Reminder ---
+async def send_reminder(application: Application):
+    if not CHAT_ID:
+        print("TARGET_CHAT_ID not set!")
+        return
+    await application.bot.send_message(
+        chat_id=int(CHAT_ID),
+        text="📢 Please fill out your volunteer food request form today!"
+    )
+
+def schedule_reminder(app: Application):
+    scheduler = BackgroundScheduler(timezone="UTC")
+    # Schedule the job every day at 09:00 UTC (adjust as needed)
+    scheduler.add_job(lambda: app.create_task(send_reminder(app)), "cron", hour=9, minute=0)
+    scheduler.start()
+
+# --- Main ---
+def main():
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
     conv_handler = ConversationHandler(
@@ -94,6 +114,13 @@ def main():
     )
 
     app.add_handler(conv_handler)
+
+    # Add temporary /getid handler
+    app.add_handler(CommandHandler("getid", get_chat_id))
+
+    # Schedule daily reminder
+    schedule_reminder(app)
+
     app.run_polling()
 
 if __name__ == "__main__":
