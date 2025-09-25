@@ -19,7 +19,7 @@ scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/au
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 
-sheet = client.open("Food Request Diwali").sheet1
+sheet = client.open("FoodRequestDiwali").sheet1
 
 # --- Conversation states ---
 DEPARTMENT, VOLUNTEERS = range(2)
