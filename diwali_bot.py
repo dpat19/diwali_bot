@@ -10,11 +10,11 @@ DEPARTMENT, VOLUNTEERS = range(2)
 departments = ["Kitchen", "Flow", "Shayona", "Signs"]
 
 # Connect to Google Sheets
-scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
-client = gspread.authorize(creds)
+scope = ["https://spreadsheets.google.com/feeds","https://www.googleapis.com/auth/drive"]
 
-# Replace with your Google Sheet name
+# Load credentials from secret file (instead of env var)
+creds = ServiceAccountCredentials.from_json_keyfile_name("/etc/secrets/credentials.json", scope)
+client = gspread.authorize(creds)
 sheet = client.open("Food Request Diwali").sheet1
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
