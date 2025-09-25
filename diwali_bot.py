@@ -3,7 +3,6 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
-import os, json
 
 # States for conversation
 DEPARTMENT, VOLUNTEERS = range(2)
@@ -11,13 +10,11 @@ DEPARTMENT, VOLUNTEERS = range(2)
 departments = ["Kitchen", "Flow", "Shayona", "Signs"]
 
 # Connect to Google Sheets
-# Scope for Google Sheets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-
-# ✅ New line: load credentials from Render secret file
-creds = ServiceAccountCredentials.from_json_keyfile_name("/etc/secrets/credentials.json", scope)
-
+creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
 client = gspread.authorize(creds)
+
+# Replace with your Google Sheet name
 sheet = client.open("Food Request Diwali").sheet1
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
