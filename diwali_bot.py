@@ -1,17 +1,21 @@
 import os
 import json
 import base64
+from datetime import datetime
+
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
 )
+
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
 
-# --- Google Sheets Setup ---
-# Decode credentials from environment variable
-creds_b64 = os.environ['GOOGLE_CREDS_B64']
+# --- Load Google Sheets Credentials from Base64 Environment Variable ---
+creds_b64 = os.environ.get("GOOGLE_CREDS_B64")
+if not creds_b64:
+    raise ValueError("GOOGLE_CREDS_B64 environment variable not set!")
+
 creds_json = base64.b64decode(creds_b64)
 creds_dict = json.loads(creds_json)
 
@@ -19,7 +23,9 @@ scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/au
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 
-sheet = client.open("FoodRequestDiwali").sheet1
+# --- Open Google Sheet by ID (avoids name issues) ---
+SHEET_ID = "1fBLl8BFPlGYLmG8s_D9d17AbvOyltZWz5wqk1wcb-oA"
+sheet = client.open_by_key(SHEET_ID).sheet1
 
 # --- Conversation states ---
 DEPARTMENT, VOLUNTEERS = range(2)
@@ -74,7 +80,8 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
     if not TELEGRAM_BOT_TOKEN:
-        raise ValueError("TELEGRAM_BOT_TOKEN not set in environment variables")
+        raise ValueError("TELEGRAM_BOT_TOKEN environment variable not set!")
+
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
     conv_handler = ConversationHandler(
