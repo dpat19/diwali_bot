@@ -11,19 +11,13 @@ DEPARTMENT, VOLUNTEERS = range(2)
 departments = ["Kitchen", "Flow", "Shayona", "Signs"]
 
 # Connect to Google Sheets
+# Scope for Google Sheets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
-creds_json = os.getenv("GOOGLE_CREDENTIALS")
-if not creds_json:
-    raise RuntimeError("⚠️ GOOGLE_CREDENTIALS environment variable not set")
+# ✅ New line: load credentials from Render secret file
+creds = ServiceAccountCredentials.from_json_keyfile_name("/etc/secrets/credentials.json", scope)
 
-creds_dict = json.loads(creds_json)
-creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
-
-
-
-# Replace with your Google Sheet name
 sheet = client.open("Food Request Diwali").sheet1
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
