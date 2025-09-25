@@ -1,4 +1,6 @@
 import os
+import json
+import base64
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
@@ -8,9 +10,15 @@ from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 
 # --- Google Sheets Setup ---
+# Decode credentials from environment variable
+creds_b64 = os.environ['GOOGLE_CREDS_B64']
+creds_json = base64.b64decode(creds_b64)
+creds_dict = json.loads(creds_json)
+
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("/etc/secrets/credentials.json", scope)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
+
 sheet = client.open("Food Request Diwali").sheet1
 
 # --- Conversation states ---
